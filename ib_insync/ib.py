@@ -7,7 +7,7 @@ from ibapi.account_summary_tags import AccountSummaryTags
 
 from ib_insync.client import Client
 from ib_insync.wrapper import Wrapper
-from ib_insync.contract import Contract
+from ib_insync.contract import Contract, Forex,Commodity,CFD
 from ib_insync.order import Order, LimitOrder, StopOrder, MarketOrder
 from ib_insync.ticker import Ticker
 from ib_insync.objects import *  # @UnusedImport
@@ -532,10 +532,11 @@ class IB:
         This method is blocking.
         """
         dt = datetime.datetime(year, 12, 31, 23, 59, 59)
+
         if not whatToShow:
             whatToShow = 'MIDPOINT' if isinstance(
                     contract, (Forex, CFD, Commodity)) else 'TRADES'
-        bars = ib.reqHistoricalData(contract, dt, '365 D',
+        bars = self.reqHistoricalData(contract, dt, '365 D',
                 '1 day', whatToShow, useRTH)
         bars = [b for b in bars if b.date.year == year]
         return bars
@@ -802,11 +803,11 @@ class IB:
     async def connectAsync(self, host, port, clientId, timeout=2):
         self.wrapper.clientId = clientId
         await self.client.connectAsync(host, port, clientId, timeout)
-        await asyncio.gather(
-                self.reqOpenOrdersAsync(),
-                self.reqAccountUpdatesAsync(),
-                self.reqPositionsAsync(),
-                self.reqExecutionsAsync())
+        # await asyncio.gather(
+        #         self.reqOpenOrdersAsync(),
+        #         self.reqAccountUpdatesAsync(),
+        #         self.reqPositionsAsync(),
+        #         self.reqExecutionsAsync())
         _logger.info('Synchronization complete')
 
     async def qualifyContractsAsync(self, *contracts):
@@ -897,11 +898,12 @@ class IB:
         if not endDateTime:
             end = ''
         elif isinstance(endDateTime, datetime.datetime):
-            end = endDateTime.strftime('%Y%m%d %H:%M:%S'),
+            end = endDateTime.strftime('%Y%m%d %H:%M:%S')
         elif isinstance(endDateTime, datetime.date):
             end = endDateTime.strftime('%Y%m%d 23:59:59')
         else:
             end = endDateTime
+
         reqId = self.client.getReqId()
         future = self.wrapper.startReq(reqId)
         self.client.reqHistoricalData(reqId, contract, end,
@@ -1033,7 +1035,7 @@ if __name__ == '__main__':
     asyncio.get_event_loop().set_debug(True)
     util.logToConsole(logging.INFO)
     ib = IB()
-    ib.connect('127.0.0.1', 7497, clientId=20)
+    ib.connect('127.0.0.1', 7496, clientId=20)
 
     aex = Index('EOE', 'FTA')
     eurusd = Forex('EURUSD')
