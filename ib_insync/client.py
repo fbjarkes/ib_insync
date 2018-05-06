@@ -2,17 +2,20 @@ import struct
 import asyncio
 import logging
 import time
+import io
+from collections import deque
+from typing import List
 
 import ibapi
 from ibapi.client import EClient
 from ibapi.wrapper import EWrapper, iswrapper
+from ibapi.common import UNSET_INTEGER, UNSET_DOUBLE
 
 from ib_insync.objects import ConnectionStats
+from ib_insync.contract import Contract
 import ib_insync.util as util
 
 __all__ = ['Client']
-
-_logger = logging.getLogger('ib_insync.client')
 
 
 class Client(EClient):
@@ -32,13 +35,17 @@ class Client(EClient):
     * ``client.connect()`` will block until the client is ready to
       serve requests; It is not necessary to wait for ``nextValidId``
       to start requests as the client has already done that.
-      The reqId is directly available  with :py:meth:`.getReqId()`.
+      The reqId is directly available with :py:meth:`.getReqId()`.
       
     * ``client.connectAsync()`` is a coroutine for connecting asynchronously.
       
     * When blocking, ``client.connect()`` can be made to time out with
       the timeout parameter (default 2 seconds).
-      
+    
+    * Optional ``wrapper.priceSizeTick(reqId, tickType, price, size)`` that
+      combines price and size instead of the two wrapper methods
+      priceTick and sizeTick.
+    
     * Optional ``wrapper.tcpDataArrived()`` method;
       If the wrapper has this method it is invoked directly after
       a network packet has arrived.
@@ -57,10 +64,15 @@ class Client(EClient):
         - apiError(errorMsg)
     """
 
+    # throttle number of requests to MaxRequests per RequestsInterval seconds
+    MaxRequests, RequestsInterval = 250, 5
+
     def __init__(self, wrapper):
         EClient.__init__(self, wrapper)
+        self._logger = logging.getLogger('ib_insync.client')
 
         # extra optional wrapper methods
+        self._priceSizeTick = getattr(wrapper, 'priceSizeTick', None)
         self._tcpDataArrived = getattr(wrapper, 'tcpDataArrived', None)
         self._tcpDataProcessed = getattr(wrapper, 'tcpDataProcessed', None)
 
@@ -78,12 +90,15 @@ class Client(EClient):
         self._startTime = time.time()
         self._numBytesRecv = 0
         self._numMsgRecv = 0
+        self._isThrottling = False
+        self._msgQ = deque()
+        self._timeQ = deque()
 
     def run(self):
         loop = asyncio.get_event_loop()
         loop.run_forever()
 
-    def isReady(self):
+    def isReady(self) -> bool:
         """
         Is the API connection up and running?
         """
@@ -93,7 +108,8 @@ class Client(EClient):
         """
         Get statistics about the connection.
         """
-        assert self.isReady(), 'Not connected'
+        if not self.isReady():
+            raise ConnectionError('Not connected')
         return ConnectionStats(
                 self._startTime,
                 time.time() - self._startTime,
@@ -104,33 +120,32 @@ class Client(EClient):
         """
         Get new request ID.
         """
-        assert self.isReady(), 'Not connected'
+        if not self.isReady():
+            raise ConnectionError('Not connected')
         newId = self._reqIdSeq
         self._reqIdSeq += 1
         return newId
 
-    def getAccounts(self) -> [str]:
+    def getAccounts(self) -> List[str]:
         """
         Get the list of account names that are under management.
         """
-        assert self.isReady(), 'Not connected'
-        assert self._accounts
+        if not self.isReady():
+            raise ConnectionError('Not connected')
         return self._accounts
 
     def connect(self, host, port, clientId, timeout=2):
         """
         Connect to TWS/IBG at given host and port and with a clientId
-        that is not in use elsewere.
+        that is not in use elsewhere.
         
         When timeout is not zero, asyncio.TimeoutError
-        is raised if the connection is not established within the timout period.
+        is raised if the connection is not established within the timeout period.
         """
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(
-                self.connectAsync(host, port, clientId, timeout))
+        util.syncAwait(self.connectAsync(host, port, clientId, timeout))
 
     async def connectAsync(self, host, port, clientId, timeout=2):
-        _logger.info(
+        self._logger.info(
                 f'Connecting to {host}:{port} with clientId {clientId}...')
         self.host = host
         self.port = port
@@ -144,27 +159,49 @@ class Client(EClient):
         try:
             await asyncio.wait_for(asyncio.gather(
                     self.conn.connect(), self._readyEvent.wait()), timeout)
-            _logger.info('API connection ready')
+            self._logger.info('API connection ready')
             if self.apiStart:
                 self.apiStart()
         except Exception as e:
-            print(e)
             self.reset()
             msg = f'API connection failed: {e!r}'
-            _logger.error(msg)
-            if self.apiError:
-                self.apiError(msg)
+            self._logger.error(msg)
             if isinstance(e, ConnectionRefusedError):
                 msg = 'Make sure API port on TWS/IBG is open'
-                _logger.error(msg)
+                self._logger.error(msg)
+            if self.apiError:
+                self.apiError(msg)
             raise
+
+    def sendMsg(self, msg):
+        loop = asyncio.get_event_loop()
+        t = loop.time()
+        times = self._timeQ
+        msgs = self._msgQ
+        while times and t - times[0] > Client.RequestsInterval:
+            times.popleft()
+        if msg:
+            msgs.append(msg)
+        while msgs and len(times) < Client.MaxRequests:
+            msg = msgs.popleft()
+            self.conn.sendMsg(self._prefix(msg.encode()))
+            times.append(t)
+        if msgs:
+            if not self._isThrottling:
+                self._isThrottling = True
+                self._logger.warn('Started to throttle requests')
+            loop.call_at(times[0] + Client.RequestsInterval, self.sendMsg, None)
+        else:
+            if self._isThrottling:
+                self._isThrottling = False
+                self._logger.warn('Stopped to throttle requests')
 
     def _prefix(self, msg):
         # prefix a message with its length
         return struct.pack('>I', len(msg)) + msg
 
     def _onSocketConnected(self):
-        _logger.info('Connected')
+        self._logger.info('Connected')
         # start handshake
         msg = b'API\0'
         msg += self._prefix(b'v%d..%d' % (
@@ -174,6 +211,7 @@ class Client(EClient):
         self.decoder = ibapi.decoder.Decoder(self.wrapper, None)
 
     def _onSocketHasData(self, data):
+        debug = self._logger.isEnabledFor(logging.DEBUG)
         if self._tcpDataArrived:
             self._tcpDataArrived()
 
@@ -194,36 +232,25 @@ class Client(EClient):
             fields.pop()  # pop off last empty element
             self._numMsgRecv += 1
 
-            if _logger.isEnabledFor(logging.DEBUG):
-                _logger.debug(
-                        '<<< %s', ','.join(f.decode() for f in fields))
+            if debug:
+                self._logger.debug('<<< %s', ','.join(f.decode() for f in fields))
 
             if not self.serverVersion_ and len(fields) == 2:
                 # this concludes the handshake
-                version, self.connTime = fields
+                version, _connTime = fields
                 self.serverVersion_ = int(version)
                 self.decoder.serverVersion = self.serverVersion_
                 self.setConnState(EClient.CONNECTED)
                 self.startApi()
                 self.wrapper.connectAck()
-                _logger.info(
+                self._logger.info(
                         f'Logged on to server version {self.serverVersion_}')
             else:
-                # snoop for nextValidId and managedAccounts response,
-                # when both are in then the client is ready
-                if fields[0] == b'9':
-                    _, _, validId = fields
-                    self._reqIdSeq = int(validId)
-                    if self._accounts:
-                        self._readyEvent.set()
-                elif fields[0] == b'15':
-                    _, _, accts = fields
-                    self._accounts = accts.decode().split(',')
-                    if self._reqIdSeq:
-                        self._readyEvent.set()
-
                 # decode and handle the message
-                self.decoder.interpret(fields)
+                try:
+                    self._decode(fields)
+                except:
+                    self._logger.exception('Decode failed')
 
         if self._tcpDataProcessed:
             self._tcpDataProcessed()
@@ -231,23 +258,96 @@ class Client(EClient):
     def _onSocketDisconnected(self):
         if self.isConnected():
             msg = f'Peer closed connection'
-            _logger.error(msg)
-            if self.apiError:
-                self.apiError(msg)
+            self._logger.error(msg)
             if not self.isReady():
                 msg = f'clientId {self.clientId} already in use?'
-                _logger.error(msg)
+                self._logger.error(msg)
+            if self.apiError:
+                self.apiError(msg)
         else:
-            _logger.info('Disconnected')
+            self._logger.info('Disconnected')
         self.reset()
         if self.apiEnd:
             self.apiEnd()
 
     def _onSocketHasError(self, msg):
-        _logger.error(msg)
+        self._logger.error(msg)
         self.reset()
         if self.apiError:
             self.apiError(msg)
+
+    def _encode(self, *fields):
+        """
+        Serialize the given fields to a string conforming to the
+        IB socket protocol.
+        """
+        result = io.StringIO()
+        for field in fields:
+            if field in (None, UNSET_INTEGER, UNSET_DOUBLE):
+                s = ''
+            elif isinstance(field, Contract):
+                c = field
+                s = '\0'.join(str(f) for f in (
+                        c.conId, c.symbol, c.secType,
+                        c.lastTradeDateOrContractMonth, c.strike,
+                        c.right, c.multiplier, c.exchange,
+                        c.primaryExchange, c.currency,
+                        c.localSymbol, c.tradingClass,
+                        1 if c.includeExpired else 0))
+            elif type(field) is list:
+                # list of TagValue
+                s = ''.join(f'{v.tag}={v.value};' for v in field)
+            elif type(field) is bool:
+                s = '1' if field else '0'
+            else:
+                s = str(field)
+
+            result.write(s)
+            result.write('\0')
+        return result.getvalue()
+
+    def _decode(self, fields):
+        """
+        Decode the fields of the single response and call the appropriate
+        callback handler.
+        """
+        msgId = int(fields[0])
+
+        # bypass the ibapi decoder for ticks for more efficiency
+        if msgId == 1:
+            if self._priceSizeTick:
+                _, _, reqId, tickType, price, size, _ = fields
+                self._priceSizeTick(int(reqId), int(tickType),
+                        float(price), int(size))
+                return
+        elif msgId == 2:
+            _, _, reqId, tickType, size = fields
+            self.wrapper.tickSize(int(reqId), int(tickType), int(size))
+            return
+        elif msgId == 12:
+            _, _, reqId, position, operation, side, price, size = fields
+            self.wrapper.updateMktDepth(int(reqId), int(position),
+                    int(operation), int(side), float(price), int(size))
+            return
+        elif msgId == 46:
+            _, _, reqId, tickType, value = fields
+            self.wrapper.tickString(int(reqId), int(tickType), value.decode())
+            return
+
+        # snoop for nextValidId and managedAccounts response,
+        # when both are in then the client is ready
+        elif msgId == 9:
+            _, _, validId = fields
+            self._reqIdSeq = int(validId)
+            if self._accounts:
+                self._readyEvent.set()
+        elif msgId == 15:
+            _, _, accts = fields
+            self._accounts = accts.decode().split(',')
+            if self._reqIdSeq:
+                self._readyEvent.set()
+
+        self.decoder.interpret(fields)
 
 
 class Connection:
@@ -260,6 +360,7 @@ class Connection:
         self.socket = None
         self.numBytesSent = 0
         self.numMsgSent = 0
+        self._logger = logging.getLogger('ib_insync.connection')
 
         # the following are callbacks for socket events
         self.connected = None
@@ -292,8 +393,8 @@ class Connection:
         self.socket.transport.write(msg)
         self.numBytesSent += len(msg)
         self.numMsgSent += 1
-        if _logger.isEnabledFor(logging.DEBUG):
-            _logger.debug(
+        if self._logger.isEnabledFor(logging.DEBUG):
+            self._logger.debug(
                 '>>> %s', ','.join(f.decode() for f in msg[4:].split(b'\0')))
 
 

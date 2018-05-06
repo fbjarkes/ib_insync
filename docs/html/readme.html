@@ -5,13 +5,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Introduction &#8212; IB-insync 0.7.3 documentation</title>
+    <title>Introduction &#8212; IB-insync 0.9.15 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '0.7.3',
+        VERSION:     '0.9.15',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true,
@@ -45,7 +45,7 @@
 
 
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=erdewit&repo=ib_insync&type=watch&count=true&size=large&v=2"
+<iframe src="https://ghbtns.com/github-btn.html?user=erdewit&repo=ib_insync&type=star&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
 
@@ -58,6 +58,7 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#documentation">Documentation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#discussion">Discussion</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#disclaimer">Disclaimer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#changelog">Changelog</a></li>
@@ -65,6 +66,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API docs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks.html">Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="recipes.html">Code recipes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="code.html">Source code</a></li>
 <li class="toctree-l1"><a class="reference internal" href="links.html">Links</a></li>
 </ul>
@@ -91,14 +93,11 @@
 <h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
 <p>The <code class="docutils literal"><span class="pre">ib_insync</span></code> package is build on top of the Python API
 from Interactive Brokers. The objective is to make it as
-easy as possible to use the API, without sacrificing any
-functionality.</p>
+easy as possible to use the API to its fullest extent.</p>
 <p>The main features are:</p>
 <ul class="simple">
-<li>An <code class="docutils literal"><span class="pre">IB</span></code> component that automatically keeps its state
-in sync with the world;</li>
-<li>A sequential style of programming that is easy to understand
-for novice users (no more callbacks);</li>
+<li>An <code class="docutils literal"><span class="pre">IB</span></code> component that automatically keeps in sync;</li>
+<li>An easy to use linear style of programming (no more callbacks);</li>
 <li>A fully asynchonous framework based on
 <a class="reference external" href="https://docs.python.org/3.6/library/asyncio.html">asyncio</a>
 for advanced users;</li>
@@ -112,15 +111,16 @@ for advanced users;</li>
 <p>Requirements:</p>
 <ul class="simple">
 <li><a class="reference external" href="http://www.python.org">Python</a> version 3.6 or higher;</li>
-<li>The <a class="reference external" href="http://interactivebrokers.github.io">Interactive Brokers Python API</a> version 9.73.03 or higher;</li>
-<li>A running TWS or IB gateway application (version 963 or higher) with the
-<a class="reference external" href="https://interactivebrokers.github.io/tws-api/initial_setup.html">API port enabled</a>.</li>
+<li>The <a class="reference external" href="http://interactivebrokers.github.io">Interactive Brokers Python API</a> version 9.73.06 or higher;</li>
+<li>A running TWS or IB gateway application (version 969 or higher).
+Make sure the
+<a class="reference external" href="https://interactivebrokers.github.io/tws-api/initial_setup.html">API port is enabled</a>
+and ‘Download open orders on connection’ is checked.</li>
 </ul>
-<p>To install packages needed for the notebooks:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="o">-</span><span class="n">U</span> <span class="n">PyQt5</span> <span class="n">quamash</span> <span class="n">jupyter</span> <span class="n">numpy</span> <span class="n">pandas</span>
+<p>To install packages needed for the examples and notebooks:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="o">-</span><span class="n">U</span> <span class="n">jupyter</span> <span class="n">numpy</span> <span class="n">pandas</span>
 </pre></div>
 </div>
-<p><a class="reference external" href="http://rawgit.com/erdewit/ib_insync/master/docs/html/index.html">IB-insync home page.</a></p>
 </div>
 <div class="section" id="example">
 <h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
@@ -130,19 +130,33 @@ for advanced users;</li>
 <span class="n">ib</span> <span class="o">=</span> <span class="n">IB</span><span class="p">()</span>
 <span class="n">ib</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="mi">7497</span><span class="p">,</span> <span class="n">clientId</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-<span class="n">bars</span> <span class="o">=</span> <span class="n">ib</span><span class="o">.</span><span class="n">reqHistoricalData</span><span class="p">(</span>
-        <span class="n">contract</span><span class="o">=</span><span class="n">Stock</span><span class="p">(</span><span class="s1">&#39;TSLA&#39;</span><span class="p">,</span> <span class="s1">&#39;SMART&#39;</span><span class="p">,</span> <span class="s1">&#39;USD&#39;</span><span class="p">),</span>
-        <span class="n">endDateTime</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
-        <span class="n">durationStr</span><span class="o">=</span><span class="s1">&#39;30 D&#39;</span><span class="p">,</span>
-        <span class="n">barSizeSetting</span><span class="o">=</span><span class="s1">&#39;1 hour&#39;</span><span class="p">,</span>
-        <span class="n">whatToShow</span><span class="o">=</span><span class="s1">&#39;TRADES&#39;</span><span class="p">,</span>
-        <span class="n">useRTH</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">contract</span> <span class="o">=</span> <span class="n">Forex</span><span class="p">(</span><span class="s1">&#39;EURUSD&#39;</span><span class="p">)</span>
+<span class="n">bars</span> <span class="o">=</span> <span class="n">ib</span><span class="o">.</span><span class="n">reqHistoricalData</span><span class="p">(</span><span class="n">contract</span><span class="p">,</span> <span class="n">endDateTime</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">durationStr</span><span class="o">=</span><span class="s1">&#39;30 D&#39;</span><span class="p">,</span>
+        <span class="n">barSizeSetting</span><span class="o">=</span><span class="s1">&#39;1 hour&#39;</span><span class="p">,</span> <span class="n">whatToShow</span><span class="o">=</span><span class="s1">&#39;MIDPOINT&#39;</span><span class="p">,</span> <span class="n">useRTH</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 
-<span class="k">print</span><span class="p">(</span><span class="n">bars</span><span class="p">)</span>
+<span class="c1"># convert to pandas dataframe:</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">util</span><span class="o">.</span><span class="n">df</span><span class="p">(</span><span class="n">bars</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">df</span><span class="p">[[</span><span class="s1">&#39;date&#39;</span><span class="p">,</span> <span class="s1">&#39;open&#39;</span><span class="p">,</span> <span class="s1">&#39;high&#39;</span><span class="p">,</span> <span class="s1">&#39;low&#39;</span><span class="p">,</span> <span class="s1">&#39;close&#39;</span><span class="p">]])</span>
+</pre></div>
+</div>
+<p>Output:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>                   <span class="n">date</span>      <span class="nb">open</span>      <span class="n">high</span>       <span class="n">low</span>     <span class="n">close</span>
+<span class="mi">0</span>   <span class="mi">2017</span><span class="o">-</span><span class="mi">08</span><span class="o">-</span><span class="mi">13</span> <span class="mi">23</span><span class="p">:</span><span class="mi">15</span><span class="p">:</span><span class="mi">00</span>  <span class="mf">1.182850</span>  <span class="mf">1.183100</span>  <span class="mf">1.182100</span>  <span class="mf">1.182400</span>
+<span class="mi">1</span>   <span class="mi">2017</span><span class="o">-</span><span class="mi">08</span><span class="o">-</span><span class="mi">14</span> <span class="mi">00</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span>  <span class="mf">1.182400</span>  <span class="mf">1.182450</span>  <span class="mf">1.181875</span>  <span class="mf">1.182175</span>
+<span class="mi">2</span>   <span class="mi">2017</span><span class="o">-</span><span class="mi">08</span><span class="o">-</span><span class="mi">14</span> <span class="mi">01</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span>  <span class="mf">1.182175</span>  <span class="mf">1.182675</span>  <span class="mf">1.181900</span>  <span class="mf">1.182525</span>
+<span class="o">...</span>
+<span class="mi">719</span> <span class="mi">2017</span><span class="o">-</span><span class="mi">09</span><span class="o">-</span><span class="mi">22</span> <span class="mi">22</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mi">00</span>  <span class="mf">1.194425</span>  <span class="mf">1.195425</span>  <span class="mf">1.194225</span>  <span class="mf">1.195050</span>
 </pre></div>
 </div>
 <p>Be sure to take a look at the
-<a class="reference external" href="http://rawgit.com/erdewit/ib_insync/master/docs/html/notebooks.html">example notebooks</a> too.</p>
+<a class="reference external" href="http://rawgit.com/erdewit/ib_insync/master/docs/html/notebooks.html">notebooks</a>
+and the
+<a class="reference external" href="http://rawgit.com/erdewit/ib_insync/master/docs/html/recipes.html">recipes</a>
+too.</p>
+</div>
+<div class="section" id="documentation">
+<h2>Documentation<a class="headerlink" href="#documentation" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://rawgit.com/erdewit/ib_insync/master/docs/html/api.html">API docs</a></p>
 </div>
 <div class="section" id="discussion">
 <h2>Discussion<a class="headerlink" href="#discussion" title="Permalink to this headline">¶</a></h2>
@@ -156,6 +170,252 @@ IB-insync and anything related to it.</p>
 </div>
 <div class="section" id="changelog">
 <h2>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="version-0-9-15">
+<h3>Version 0.9.15<a class="headerlink" href="#version-0-9-15" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed bug in default order conditions</li>
+<li>Fixed regression from v0.9.13 in <code class="docutils literal"><span class="pre">placeOrder</span></code></li>
+</ul>
+</div>
+<div class="section" id="version-0-9-14">
+<h3>Version 0.9.14<a class="headerlink" href="#version-0-9-14" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed <code class="docutils literal"><span class="pre">orderStatus</span></code> callback regression</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-13">
+<h3>Version 0.9.13<a class="headerlink" href="#version-0-9-13" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Log handling improvements</li>
+<li>Client with clientId=0 can now manage manual TWS orders</li>
+<li>Client with master clientId can now monitor manual TWS orders</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-12">
+<h3>Version 0.9.12<a class="headerlink" href="#version-0-9-12" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Run IBC and IBController directly instead of via shell</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-11">
+<h3>Version 0.9.11<a class="headerlink" href="#version-0-9-11" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed bug when collecting ticks using ib.waitOnUpdate()</li>
+<li>Added ContFuture class (continuous futures)</li>
+<li>Added Ticker.midpoint()</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-10">
+<h3>Version 0.9.10<a class="headerlink" href="#version-0-9-10" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>ib.accountValues() fixed for use with multiple accounts</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-9">
+<h3>Version 0.9.9<a class="headerlink" href="#version-0-9-9" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed issue #57</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-8">
+<h3>Version 0.9.8<a class="headerlink" href="#version-0-9-8" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fix for ib.reqPnLSingle</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-7">
+<h3>Version 0.9.7<a class="headerlink" href="#version-0-9-7" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Profit and Loss (PnL) funcionality added</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-6">
+<h3>Version 0.9.6<a class="headerlink" href="#version-0-9-6" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>IBC added</li>
+<li>PR #53 (delayed greeks) merged</li>
+<li>Ticker.futuresOpenInterest field removed</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-5">
+<h3>Version 0.9.5<a class="headerlink" href="#version-0-9-5" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed canceling bar and tick subscriptions</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-4">
+<h3>Version 0.9.4<a class="headerlink" href="#version-0-9-4" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed issue #49</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-3">
+<h3>Version 0.9.3<a class="headerlink" href="#version-0-9-3" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Watchdog class added</li>
+<li>ib.setTimeout() added</li>
+<li>Ticker.dividends added for use with genericTickList 456</li>
+<li>Errors and warnings will now log the contract they apply to</li>
+<li>IB error() callback signature changed to include contract</li>
+<li>Fix for issue #44</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-2">
+<h3>Version 0.9.2<a class="headerlink" href="#version-0-9-2" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>historical ticks and realtime bars now return time in UTC</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-1">
+<h3>Version 0.9.1<a class="headerlink" href="#version-0-9-1" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>IBController added</li>
+<li>openOrder callback added</li>
+<li>default arguments for ib.connect() and ib.reqMktData()</li>
+</ul>
+</div>
+<div class="section" id="version-0-9-0">
+<h3>Version 0.9.0<a class="headerlink" href="#version-0-9-0" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>minimum API version is v9.73.06</li>
+<li>tickByTick support</li>
+<li>automatic request throttling</li>
+<li>ib.accountValues() now works for multiple accounts</li>
+<li>AccountValue.modelCode added</li>
+<li>Ticker.rtVolume added</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-17">
+<h3>Version 0.8.17<a class="headerlink" href="#version-0-8-17" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>workaround for IBAPI v9.73.06 for Contract.lastTradeDateOrContractMonth format</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-16">
+<h3>Version 0.8.16<a class="headerlink" href="#version-0-8-16" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>util.tree() method added</li>
+<li><code class="docutils literal"><span class="pre">error</span></code> callback signature changed to (reqId, errorCode, errorString)</li>
+<li><code class="docutils literal"><span class="pre">accountValue</span></code> and <code class="docutils literal"><span class="pre">accountSummary</span></code> callbacks added</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-15">
+<h3>Version 0.8.15<a class="headerlink" href="#version-0-8-15" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>util.useQt fixed for use with Windows</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-14">
+<h3>Version 0.8.14<a class="headerlink" href="#version-0-8-14" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fix for ib.schedule()</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-13">
+<h3>Version 0.8.13<a class="headerlink" href="#version-0-8-13" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Import order conditions into ib_insync namespace</li>
+<li>util.useQtAlt() added for using nested event loops on Windows with Qt</li>
+<li>ib.schedule() added</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-12">
+<h3>Version 0.8.12<a class="headerlink" href="#version-0-8-12" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed conditional orders</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-11">
+<h3>Version 0.8.11<a class="headerlink" href="#version-0-8-11" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>FlexReport added</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-10">
+<h3>Version 0.8.10<a class="headerlink" href="#version-0-8-10" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Fixed issue #22</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-9">
+<h3>Version 0.8.9<a class="headerlink" href="#version-0-8-9" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Ticker.vwap field added (for use with generic tick 233)</li>
+<li>Client with master clientId can now monitor orders and trades of other clients</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-8">
+<h3>Version 0.8.8<a class="headerlink" href="#version-0-8-8" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">barUpdate</span></code> event now used also for reqRealTimeBars responses</li>
+<li><code class="docutils literal"><span class="pre">reqRealTimeBars</span></code> will return RealTimeBarList instead of list</li>
+<li>realtime bars example added to bar data notebook</li>
+<li>fixed event handling bug in Wrapper.execDetails</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-7">
+<h3>Version 0.8.7<a class="headerlink" href="#version-0-8-7" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>BarDataList now used with reqHistoricalData; it also stores the request parameters</li>
+<li>updated the typing annotations</li>
+<li>added <code class="docutils literal"><span class="pre">barUpdate</span></code> event to <code class="docutils literal"><span class="pre">IB</span></code></li>
+<li>bar- and tick-data notebooks updated to use callbacks for realtime data</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-6">
+<h3>Version 0.8.6<a class="headerlink" href="#version-0-8-6" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>ticker.marketPrice adjusted to ignore price of -1</li>
+<li>ticker.avVolume handling fixed</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-5">
+<h3>Version 0.8.5<a class="headerlink" href="#version-0-8-5" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>realtimeBar wrapper fix</li>
+<li>context manager for IB and IB.connect()</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-4">
+<h3>Version 0.8.4<a class="headerlink" href="#version-0-8-4" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>compatibility with upcoming ibapi changes</li>
+<li>added <code class="docutils literal"><span class="pre">error</span></code> event to <code class="docutils literal"><span class="pre">IB</span></code></li>
+<li>notebooks updated to use <code class="docutils literal"><span class="pre">loopUntil</span></code></li>
+<li>small fixes and performance improvements</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-3">
+<h3>Version 0.8.3<a class="headerlink" href="#version-0-8-3" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>new IB.reqHistoricalTicks API method</li>
+<li>new IB.loopUntil method</li>
+<li>fixed issues #4, #6, #7</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-2">
+<h3>Version 0.8.2<a class="headerlink" href="#version-0-8-2" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>fixed swapped ticker.putOpenInterest vs ticker.callOpenInterest</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-1">
+<h3>Version 0.8.1<a class="headerlink" href="#version-0-8-1" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>fixed wrapper.tickSize regression</li>
+</ul>
+</div>
+<div class="section" id="version-0-8-0">
+<h3>Version 0.8.0<a class="headerlink" href="#version-0-8-0" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>support for realtime bars and keepUpToDate for historical bars</li>
+<li>added option greeks to Ticker</li>
+<li>new IB.waitUntil and IB.timeRange scheduling methods</li>
+<li>notebooks no longer depend on PyQt5 for live updates</li>
+<li>notebooks can be run in one go (‘run all’)</li>
+<li>tick handling bypasses ibapi decoder for more efficiency</li>
+</ul>
+</div>
 <div class="section" id="version-0-7-3">
 <h3>Version 0.7.3<a class="headerlink" href="#version-0-7-3" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
@@ -215,11 +475,11 @@ IB-insync and anything related to it.</p>
     <div class="clearer"></div>
   </div>
     <div class="footer">
-      &copy;2017, Ewald de Wit.
+      &copy;2018, Ewald de Wit.
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
       <a href="_sources/readme.rst.txt"
